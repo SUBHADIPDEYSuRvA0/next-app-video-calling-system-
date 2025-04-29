@@ -1,54 +1,50 @@
-import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/mongodb"
+import { NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
 
-interface Params {
-  params: {
-    id: string
-  }
-}
-
-/**
- * Get meeting details
- */
-export async function GET(request: Request, { params }: Params) {
+// Correct way to define the dynamic route handler
+export async function GET(
+  request: Request,
+  context: { params: { id: string } } // context contains `params`
+) {
   try {
-    const { id } = params
+    const params = await context.params;
+    const roomCode = params.id;
+    const { db } = await connectToDatabase();
 
-    const { db } = await connectToDatabase()
-
-    const meeting = await db.collection("meetings").findOne({ _id: id, active: true })
+    const meeting = await db.collection("meetings").findOne({ roomCode });
 
     if (!meeting) {
-      return NextResponse.json({ error: "Meeting not found or has ended" }, { status: 404 })
+      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
     }
 
-    return NextResponse.json(meeting)
+    return NextResponse.json({
+      roomCode: meeting.roomCode,
+      createdAt: meeting.createdAt,
+      active: meeting.active,
+    });
   } catch (error) {
-    console.error("Error fetching meeting:", error)
-    return NextResponse.json({ error: "Failed to fetch meeting" }, { status: 500 })
+    console.error("Error fetching meeting:", error);
+    return NextResponse.json({ error: "Failed to fetch meeting" }, { status: 500 });
   }
 }
 
-/**
- * End a meeting
- */
-export async function DELETE(request: Request, { params }: Params) {
+export async function PATCH(request: Request, context: { params: { id: string } }) {
   try {
-    const { id } = params
+    console.log(context);  // Debugging: Check what `context` contains
+    const roomCode = context.params.id;
+    const { db } = await connectToDatabase();
+    const data = await request.json();
 
-    const { db } = await connectToDatabase()
-
-    const result = await db
-      .collection("meetings")
-      .updateOne({ _id: id }, { $set: { active: false, endedAt: new Date() } })
+    // Update the meeting in the database
+    const result = await db.collection("meetings").updateOne({ roomCode }, { $set: data });
 
     if (result.matchedCount === 0) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 })
+      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error ending meeting:", error)
-    return NextResponse.json({ error: "Failed to end meeting" }, { status: 500 })
+    console.error("Error updating meeting:", error);
+    return NextResponse.json({ error: "Failed to update meeting" }, { status: 500 });
   }
 }

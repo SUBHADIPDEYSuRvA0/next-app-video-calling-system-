@@ -13,12 +13,7 @@ export default function Home() {
             <span className="text-xl font-semibold text-emerald-600">MeetClone</span>
           </div>
           <nav className="flex items-center gap-4">
-            <Link href="/signin" className="text-sm text-gray-600 hover:text-gray-900">
-              Sign In
-            </Link>
-            <Link href="/signup">
-              <Button size="sm">Sign Up</Button>
-            </Link>
+           
           </nav>
         </div>
       </header>
@@ -81,7 +76,18 @@ export default function Home() {
 
 function JoinMeetingForm() {
   return (
-    <form action="/api/join-meeting" method="POST" className="flex w-full items-center gap-2 sm:w-auto">
+    <form
+      action="/api/join-meeting"
+      method="POST"
+      className="flex w-full items-center gap-2 sm:w-auto"
+      onSubmit={(e) => {
+        const roomCode = e.target.roomCode.value;
+        if (!roomCode) {
+          e.preventDefault();
+          alert("Room code is required!");
+        }
+      }}
+    >
       <Input
         type="text"
         name="roomCode"
@@ -93,7 +99,7 @@ function JoinMeetingForm() {
         <ArrowRight className="h-4 w-4" />
       </Button>
     </form>
-  )
+  );
 }
 
 const features = [

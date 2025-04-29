@@ -31,56 +31,24 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
 
       // Join a room
       socket.on("join-room", ({ roomId, username }) => {
-        console.log(`${socket.id} (${username}) joining room: ${roomId}`)
-
-        // Leave previous room if any
-        const previousRoom = userRooms.get(socket.id)
-        if (previousRoom) {
-          socket.leave(previousRoom)
-
-          // Remove user from the room's participants
-          const roomParticipants = rooms.get(previousRoom) || new Map()
-          roomParticipants.delete(socket.id)
-
-          if (roomParticipants.size === 0) {
-            rooms.delete(previousRoom)
-          } else {
-            rooms.set(previousRoom, roomParticipants)
+        try {
+          console.log(`${socket.id} (${username}) joining room: ${roomId}`);
+      
+          // Leave previous room if any
+          const previousRoom = userRooms.get(socket.id);
+          if (previousRoom) {
+            socket.leave(previousRoom);
+            console.log(`Left room: ${previousRoom}`);
           }
-
-          // Notify others in the previous room
-          socket.to(previousRoom).emit("user-left", {
-            userId: socket.id,
-          })
+      
+          // Join new room
+          socket.join(roomId);
+          userRooms.set(socket.id, roomId);
+          console.log(`Joined room: ${roomId}`);
+        } catch (error) {
+          console.error("Error handling room join:", error);
         }
-
-        // Join new room
-        socket.join(roomId)
-        userRooms.set(socket.id, roomId)
-
-        // Add user to room participants
-        const roomParticipants = rooms.get(roomId) || new Map()
-        roomParticipants.set(socket.id, {
-          id: socket.id,
-          name: username,
-          isAudioEnabled: true,
-          isVideoEnabled: true,
-        })
-        rooms.set(roomId, roomParticipants)
-
-        // Notify others in the room
-        socket.to(roomId).emit("user-joined", {
-          userId: socket.id,
-          username,
-        })
-
-        // Send current participants to the new user
-        const participants = Array.from(roomParticipants.values())
-        io.to(socket.id).emit("participants", participants)
-
-        // Broadcast updated participants list to all in the room
-        io.to(roomId).emit("participants", participants)
-      })
+      });
 
       // Leave a room
       socket.on("leave-room", () => {
